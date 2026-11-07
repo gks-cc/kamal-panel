@@ -30,10 +30,7 @@ module Authentication
     def find_session_by_cookie
       return nil unless cookies.signed[:session_id]
 
-      session = Session.find_by(id: cookies.signed[:session_id])
-      return nil if session.nil? || session.user.deactivated?
-
-      session
+      Session.usable_by_id(cookies.signed[:session_id])
     end
 
     def request_authentication
@@ -45,10 +42,16 @@ module Authentication
       session.delete(:return_to_after_authenticating) || root_url
     end
 
-    def start_new_session_for(user)
-      user.sessions.create!(user_agent: request.user_agent, ip_address: request.remote_ip).tap do |session|
+    # remember: false gives a browser-session cookie (gone when the browser closes); true keeps it
+    # for Session::REMEMBERED_FOR. Either way the session row carries its own expires_at, which is
+    # what actually decides: a cookie can outlive its intent (session restore, a copied cookie).
+    def start_new_session_for(user, remember: false)
+      expires_at = Session.lifetime(remember:).from_now
+      user.sessions.create!(user_agent: request.user_agent, ip_address: request.remote_ip, expires_at:).tap do |session|
         Current.session = session
-        cookies.signed.permanent[:session_id] = { value: session.id, httponly: true, same_site: :lax }
+        cookie = { value: session.id, httponly: true, same_site: :lax }
+        cookie[:expires] = expires_at if remember
+        cookies.signed[:session_id] = cookie
       end
     end
 
