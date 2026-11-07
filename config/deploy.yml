@@ -18,6 +18,8 @@ servers:
       # 0.5 核下十几个应用并发采集会频繁「解析超时」，所以给到 1 核。
       memory: 640m
       cpus: 1
+      # CPU 权重（默认 1024）：空闲时照常用，与同机主应用抢 CPU 时内核按 1:4 优先保证主应用。
+      cpu-shares: 256
 
 proxy:
   ssl: true
