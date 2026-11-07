@@ -39,14 +39,15 @@ gem "bootsnap", require: false
 # project's core dependency: we directly reuse its config parsing and command generation. require:
 # false is deliberate: kamal loads the Thor CLI, so we only require it locally where needed.
 #
-# The version can be overridden by KAMAL_VERSION, solely for CI's compatibility matrix (see
-# .github/workflows/ci.yml): the panel relies on Kamal's internal behavior in four places, from
+# The version can be overridden by KAMAL_GEM_VERSION, solely for CI's compatibility matrix (see
+# .github/workflows/ci.yml). Not KAMAL_VERSION: Kamal injects that into every app container as the
+# image version (a git sha), so the panel deployed with Kamal would fail to boot in bundler. The panel relies on Kamal's internal behavior in four places, from
 # config parsing, container labels, and lock directory format to CLI arguments; this is the
 # unavoidable cost of the "require the gem directly" approach and must surface automatically in CI,
 # rather than waiting for users to report "the panel is totally broken after upgrading Kamal" (main
 # design §9.4). Day-to-day development and the main test job never set this variable, and use the
 # default constraint below and the version pinned in Gemfile.lock.
-gem "kamal", ENV.fetch("KAMAL_VERSION", "~> 2.12"), require: false
+gem "kamal", ENV.fetch("KAMAL_GEM_VERSION", "~> 2.12"), require: false
 
 # Add HTTP asset caching/compression and X-Sendfile acceleration to Puma
 # [https://github.com/basecamp/thruster/]
