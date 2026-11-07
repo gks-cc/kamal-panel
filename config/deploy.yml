@@ -14,9 +14,10 @@ servers:
     hosts:
       - 121.40.124.141
     options:
-      # 服务器约 2 核 1.7GiB，与多个应用共用
-      memory: 512m
-      cpus: 0.5
+      # 服务器约 2 核 1.7GiB，与多个应用共用。每次解析 deploy.yml 会起 Ruby 子进程（硬超时 5 秒），
+      # 0.5 核下十几个应用并发采集会频繁「解析超时」，所以给到 1 核。
+      memory: 640m
+      cpus: 1
 
 proxy:
   ssl: true
