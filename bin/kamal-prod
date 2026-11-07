@@ -1,0 +1,11 @@
+#!/bin/sh
+# 加载私有 .env.production（不入库）后调用 kamal，供 .kamal/secrets 引用其中的变量。
+# 用法：bin/kamal-prod deploy | logs | console | lock release ...
+set -eu
+cd "$(dirname "$0")/.."
+if [ -f .env.production ]; then
+  set -a
+  . ./.env.production
+  set +a
+fi
+exec bin/kamal "$@"

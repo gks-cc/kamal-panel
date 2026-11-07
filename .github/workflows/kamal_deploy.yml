@@ -1,0 +1,89 @@
+name: Deploy with Kamal
+
+# gks 分支（本 fork 的部署分支，main 保持与上游同步）push 后先跑完整 CI，通过再部署到
+# https://kamal.gks.cc；也可在 Actions 页手动触发。首次部署时手动触发并勾选 setup。
+# 不用 workflow_run：它只认默认分支上的 workflow 文件，而本文件只存在于 gks。
+on:
+  push:
+    branches: [gks]
+  workflow_dispatch:
+    inputs:
+      setup:
+        description: "首次部署：执行 kamal setup"
+        type: boolean
+        default: false
+
+# 同一时间只允许一个部署在跑，避免两次 workflow 互相抢 kamal 锁。
+concurrency:
+  group: kamal-deploy-kamal-panel
+  cancel-in-progress: false
+
+env:
+  KAMAL_VERSION: "2.12.0"
+  DEPLOY_HOST: 121.40.124.141
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  deploy:
+    needs: ci
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 只需要 kamal CLI，不装项目依赖。第三方 action 固定到 commit SHA，且在加载私钥之前运行。
+      - name: Setup Ruby
+        uses: ruby/setup-ruby@b3aaceaef7e0ee231b499e7b5f49c03fc1d32199 # v1.338.0
+        with:
+          ruby-version: "3.4"
+
+      - name: Install Kamal
+        run: gem install kamal -v "$KAMAL_VERSION" --no-document
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
+      # 只在本步骤读取私钥 secret，直接写入并加载到 ssh-agent，不经第三方 action。
+      - name: Install SSH key
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ vars.SSH_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          install -m 600 /dev/null ~/.ssh/github-actions
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/github-actions
+          # 主机公钥固定在仓库变量 SSH_KNOWN_HOSTS（ssh-keyscan 结果经人工核对），不在运行时信任新主机。
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
+          printf 'Host %s\n  User root\n  IdentityFile ~/.ssh/github-actions\n  IdentitiesOnly yes\n  PasswordAuthentication no\n  StrictHostKeyChecking yes\n' "$DEPLOY_HOST" > ~/.ssh/config
+          chmod 600 ~/.ssh/config
+          eval "$(ssh-agent -s)"
+          ssh-add ~/.ssh/github-actions
+          echo "SSH_AUTH_SOCK=$SSH_AUTH_SOCK" >> "$GITHUB_ENV"
+          echo "SSH_AGENT_PID=$SSH_AGENT_PID" >> "$GITHUB_ENV"
+
+      # 清理上一次异常中断留下的锁。注意：会无条件释放锁，若此刻有人在本地手动部署会一并释放。
+      - name: Release lock
+        run: kamal lock release
+
+      - name: First-time setup
+        if: github.event_name == 'workflow_dispatch' && inputs.setup
+        run: kamal setup
+        env: &kamal_secrets
+          # .kamal/secrets 只引用这些环境变量；只交给需要它们的 kamal 步骤。
+          KAMAL_REGISTRY_PASSWORD: ${{ secrets.KAMAL_REGISTRY_PASSWORD }}
+          RAILS_MASTER_KEY: ${{ secrets.RAILS_MASTER_KEY }}
+          SECRET_KEY_BASE: ${{ secrets.SECRET_KEY_BASE }}
+          AR_ENCRYPTION_PRIMARY_KEY: ${{ secrets.AR_ENCRYPTION_PRIMARY_KEY }}
+          AR_ENCRYPTION_DETERMINISTIC_KEY: ${{ secrets.AR_ENCRYPTION_DETERMINISTIC_KEY }}
+          AR_ENCRYPTION_KEY_DERIVATION_SALT: ${{ secrets.AR_ENCRYPTION_KEY_DERIVATION_SALT }}
+
+      - name: Deploy
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.setup) }}
+        run: kamal deploy
+        env: *kamal_secrets
+
+      - name: Prune old images and containers
+        run: kamal prune all

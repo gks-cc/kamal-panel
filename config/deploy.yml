@@ -1,54 +1,51 @@
-# Configuration the panel uses to deploy itself. This copy in the repo is a [sample]: hostnames,
-# domains, and image ownership are all placeholders; fill them in and it works as-is (see README
-# "Deploying the panel itself").
+# 面板自身的部署配置：https://kamal.gks.cc（121.40.124.141，与 ant-tree / rd-sync / apexpm 同机，
+# 共用一个 kamal-proxy）。部署分支是 gks（main 保持与上游同步），push gks 后由 .github/workflows/kamal_deploy.yml 自动部署；
+# 本地手动部署用 bin/kamal-prod deploy（加载不入库的 .env.production）。
 #
-# ⚠️ Do not add the panel to its own managed-app list. Restarting the panel with the panel kills
-#    itself midway through the command: the audit stays at pending forever, streaming output is cut off halfway, and the deploy lock is left on the primary
-#    host and must be force-unlocked by hand. The panel deploys itself from a dev machine with the kamal CLI setup below.
+# ⚠️ 不要把面板加进它自己的托管应用列表：面板重启自己会在命令中途把自己杀掉，审计永远停在 pending，
+#    还会在主机上留下部署锁，需要手动 kamal lock release。
 service: kamal-panel
 
-# Image ownership on ghcr.io. Replace with your own GitHub username or org name.
-image: your-org/kamal-panel
+image: gkscc/kamal-panel
 
-# The panel is [single-node]: data lives in SQLite, and Solid Queue runs inside the Puma process
-# (see the env and volumes below). So there can be only one web server here; adding a second does
-# not give you a more capable panel, only two panels that each hold half the data and don't know the
-# other exists.
+# 面板是单节点：数据在 SQLite 里，Solid Queue 跑在 Puma 进程内，只能有一台 web。
 servers:
   web:
-    - your-server.example.com
+    hosts:
+      - 121.40.124.141
+    options:
+      # 服务器约 2 核 1.7GiB，与多个应用共用
+      memory: 512m
+      cpus: 0.5
 
-# Let's Encrypt issues certificates automatically. With it you must enable config.assume_ssl and
-# config.force_ssl in config/environments/production.rb (those two lines are commented out right
-# now); otherwise Rails thinks it is on bare HTTP, will generate http:// links, and will let
-# insecure cookies through.
 proxy:
   ssl: true
-  host: panel.example.com
+  host: kamal.gks.cc
+  # thruster 监听 80，转发给容器内的 puma
+  app_port: 80
+  healthcheck:
+    path: /up
+    interval: 3
+    timeout: 60
 
 registry:
-  server: ghcr.io
-  username:
-    - KAMAL_REGISTRY_USERNAME
+  server: registry.cn-hongkong.aliyuncs.com
+  username: hi35360296@aliyun.com
   password:
     - KAMAL_REGISTRY_PASSWORD
 
 env:
   secret:
     - RAILS_MASTER_KEY
-    # These three are [required] by the panel, not optional: SSH private keys are stored encrypted
-    # with Active Record encryption; without them the panel still boots, but saving a private key
-    # errors out. That is, you can log in and see the UI but can't onboard any app (this is what the
-    # README section "Active Record encryption credentials" is about).
+    - SECRET_KEY_BASE
+    # SSH 私钥等凭据用 Active Record encryption 加密入库；这三个值丢了，库里已加密的凭据将永久无法解密。
     - AR_ENCRYPTION_PRIMARY_KEY
     - AR_ENCRYPTION_DETERMINISTIC_KEY
     - AR_ENCRYPTION_KEY_DERIVATION_SALT
   clear:
-    # Polling and action execution are Solid Queue jobs, running inside the Puma process.
     SOLID_QUEUE_IN_PUMA: true
-    # The panel's own address, for the links in alert notifications and emails. Keep it in step with
-    # proxy.host.
-    # PANEL_URL: https://panel.example.com
+    PANEL_URL: https://kamal.gks.cc
+    TZ: Asia/Shanghai
 
 aliases:
   console: app exec --interactive --reuse "bin/rails console"
@@ -56,13 +53,23 @@ aliases:
   logs: app logs -f
   dbc: app exec --interactive --reuse "bin/rails dbconsole --include-password"
 
-# The SQLite database and Active Storage files all live in this volume. **It contains the encrypted
-# SSH private keys**; backing it up is equivalent to backing up the access credentials for all your
-# servers, so treat it at that level.
+# SQLite 数据库与 Active Storage 都在这个卷里，**含加密后的 SSH 私钥**，备份按服务器访问凭据级别对待。
 volumes:
   - "kamal_panel_storage:/rails/storage"
 
 asset_path: /rails/public/assets
 
+logging:
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: 3
+
+ssh:
+  user: root
+
 builder:
   arch: amd64
+  # 阿里云 ACR 不支持 OCI attestation manifest，必须关闭
+  provenance: false
+  sbom: false

@@ -25,3 +25,6 @@ tmp/
 
 # Screenshots and console logs from Playwright MCP
 /.playwright-mcp/
+
+# 本地部署用的私有凭据（bin/kamal-prod 加载）
+.env.production

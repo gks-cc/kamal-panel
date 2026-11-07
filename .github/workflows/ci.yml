@@ -4,6 +4,7 @@ on:
   push:
     branches: [ main ]
   pull_request:
+  workflow_call:
 
 # Runners are pinned: ubuntu-latest moved to 26.04, whose setup-ruby builds only the newest patch of
 # each series (4.0.9), so the Ruby in .ruby-version stopped installing. Bump both together.
