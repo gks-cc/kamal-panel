@@ -60,6 +60,9 @@ volumes:
 
 asset_path: /rails/public/assets
 
+# 新容器启动要先 db:prepare，且与旧容器同时采集抢 CPU，实测约 40 秒才开始监听；默认 30 秒不够。
+deploy_timeout: 120
+
 logging:
   driver: json-file
   options:
