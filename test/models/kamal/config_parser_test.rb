@@ -808,4 +808,76 @@ class Kamal::ConfigParserTest < ActiveSupport::TestCase
       Kamal::ConfigParser.call(yaml: yaml, destination: "production")
     end
   end
+
+  # Counts real subprocess runs, to tell a cache hit from a fresh parse.
+  class CountingParser < Kamal::ConfigParser
+    cattr_accessor :runs, default: 0
+
+    private
+      def run_subprocess(dir)
+        self.class.runs += 1
+        super
+      end
+  end
+
+  def with_parse_cache(ttl: 10.minutes)
+    previous = Rails.configuration.x.deploy_config_parse_cache_ttl
+    Rails.configuration.x.deploy_config_parse_cache_ttl = ttl
+    Rails.cache.clear
+    CountingParser.runs = 0
+    yield
+  ensure
+    Rails.configuration.x.deploy_config_parse_cache_ttl = previous
+    Rails.cache.clear
+  end
+
+  test "the same deploy.yml is parsed in a subprocess once, then served from the cache" do
+    with_parse_cache do
+      first = CountingParser.call(yaml: simple_yaml, destination: "production")
+      second = CountingParser.call(yaml: simple_yaml, destination: "production")
+
+      assert_equal 1, CountingParser.runs
+      assert_equal first.service, second.service
+      assert_equal first.app_hosts, second.app_hosts
+      # build_ssh_options rewrites a key of the result; the cached copy must not have been mutated.
+      assert_equal first.ssh_options, second.ssh_options
+    end
+  end
+
+  test "changing the content, destination or destination yaml parses again" do
+    with_parse_cache do
+      CountingParser.call(yaml: simple_yaml, destination: "production")
+      CountingParser.call(yaml: simple_yaml.sub("service: blog", "service: shop"), destination: "production")
+      CountingParser.call(yaml: simple_yaml)
+
+      assert_equal 3, CountingParser.runs
+    end
+  end
+
+  test "parse errors are not cached, so a fixed config shows up on the next call" do
+    with_parse_cache do
+      2.times do
+        assert_raises(Kamal::ConfigParser::ParseError) { CountingParser.call(yaml: "service: [") }
+      end
+
+      assert_equal 2, CountingParser.runs
+    end
+  end
+
+  test "a cached result still goes through destination validation" do
+    with_parse_cache do
+      CountingParser.call(yaml: simple_yaml, destination: "production")
+
+      assert_raises(Kamal::ConfigParser::ParseError) { CountingParser.call(yaml: simple_yaml, destination: "../etc") }
+      assert_equal 1, CountingParser.runs
+    end
+  end
+
+  test "a nil TTL turns the cache off" do
+    with_parse_cache(ttl: nil) do
+      2.times { CountingParser.call(yaml: simple_yaml, destination: "production") }
+
+      assert_equal 2, CountingParser.runs
+    end
+  end
 end

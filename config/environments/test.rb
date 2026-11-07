@@ -22,6 +22,10 @@ Rails.application.configure do
   config.consider_all_requests_local = true
   config.cache_store = :memory_store
 
+  # The memory store is shared across tests; a parse cached by one test would leak into the next.
+  # Tests that exercise the cache turn it on explicitly (config_parser_test).
+  config.x.deploy_config_parse_cache_ttl = nil
+
   # Render exception templates for rescuable exceptions and raise for other exceptions.
   config.action_dispatch.show_exceptions = :rescuable
 
