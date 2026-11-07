@@ -49,12 +49,12 @@ jobs:
       - name: Install SSH key
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_KNOWN_HOSTS: ${{ vars.SSH_KNOWN_HOSTS }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
         run: |
           install -d -m 700 ~/.ssh
           install -m 600 /dev/null ~/.ssh/github-actions
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/github-actions
-          # 主机公钥固定在仓库变量 SSH_KNOWN_HOSTS（ssh-keyscan 结果经人工核对），不在运行时信任新主机。
+          # 主机公钥固定在仓库 secret SSH_KNOWN_HOSTS（ssh-keyscan 结果经人工核对），不在运行时信任新主机。
           printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
           printf 'Host %s\n  User root\n  IdentityFile ~/.ssh/github-actions\n  IdentitiesOnly yes\n  PasswordAuthentication no\n  StrictHostKeyChecking yes\n' "$DEPLOY_HOST" > ~/.ssh/config
