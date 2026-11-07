@@ -1,8 +1,8 @@
 name: Deploy with Kamal
 
-# gks 分支（本 fork 的部署分支，main 保持与上游同步）push 后先跑完整 CI，通过再部署到
-# https://kamal.gks.cc；也可在 Actions 页手动触发。首次部署时手动触发并勾选 setup。
-# 不用 workflow_run：它只认默认分支上的 workflow 文件，而本文件只存在于 gks。
+# gks 分支（本 fork 的部署分支，main 保持与上游同步）push 后直接部署到 https://kamal.gks.cc；
+# 也可在 Actions 页手动触发。首次部署时手动触发并勾选 setup。
+# 本分支不跑 CI（已删除 ci.yml）：从上游合并时若 ci.yml 有改动会出现 modify/delete 冲突，保持删除即可。
 on:
   push:
     branches: [gks]
@@ -23,11 +23,7 @@ env:
   DEPLOY_HOST: 121.40.124.141
 
 jobs:
-  ci:
-    uses: ./.github/workflows/ci.yml
-
   deploy:
-    needs: ci
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
