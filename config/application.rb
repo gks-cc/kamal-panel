@@ -31,6 +31,10 @@ module KamalPanel
     # one. Unset: notifications go out without a link (see PanelUrl).
     config.x.panel_url = ENV["PANEL_URL"].presence&.chomp("/")
 
+    # How long a successful deploy.yml parse is reused (Kamal::ConfigParser). Each parse is a Ruby
+    # subprocess; without this every collection round of every app pays for one. nil disables it.
+    config.x.deploy_config_parse_cache_ttl = 10.minutes
+
     # The panel UI is in Chinese, so the strings Rails itself produces (time_ago_in_words,
     # validation error messages, etc.) must be Chinese too; translations come from rails-i18n.
     # fallbacks go here rather than only in production: when a translation is missing, better to

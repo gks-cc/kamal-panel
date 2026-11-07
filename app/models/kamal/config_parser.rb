@@ -1,4 +1,5 @@
 require "open3"
+require "digest"
 require "json"
 require "tmpdir"
 require "pathname"
@@ -49,24 +50,66 @@ class Kamal::ConfigParser
   end
 
   def call
-    Dir.mktmpdir(TMPDIR_PREFIX) do |dir|
-      write_config_files(dir)
+    # Checked before the cache too: a cached result must never let an invalid destination through.
+    validate_destination! if destination.present?
 
-      result = JSON.parse(run_subprocess(dir))
-      raise ParseError, result["error"] unless result["ok"]
+    # deep_dup: build_ssh_options below rewrites a key, and the cached Hash must stay as stored.
+    result = cached_subprocess_result.deep_dup
 
-      validate_service!(result["service"])
-      validate_hosts!(result)
-      result["ssh_options"] = build_ssh_options(result["ssh_options"])
+    validate_service!(result["service"])
+    validate_hosts!(result)
+    result["ssh_options"] = build_ssh_options(result["ssh_options"])
 
-      Kamal::ParsedConfig.new(result)
-    end
-  rescue JSON::ParserError => e
-    raise ParseError, "子进程返回了无法解析的输出：#{e.message}"
+    Kamal::ParsedConfig.new(result)
   end
 
   private
     attr_reader :yaml, :destination, :destination_yaml, :timeout
+
+    # Every collection round (status poll, metrics) parses the app's deploy.yml, and each parse is a
+    # fresh Ruby process loading Kamal: ~0.7s of CPU. With a dozen apps that is a third of a core
+    # spent re-deriving the same answer, on a host that usually runs production apps too. So a
+    # successful subprocess result is cached by content digest: the same YAML parses once per TTL.
+    #
+    # Only successes are cached; errors and timeouts re-run every time, so a fixed config shows up
+    # on the next round. The TTL (config.x.deploy_config_parse_cache_ttl) bounds how long ERB whose
+    # output changes over time (ENV, the clock) can stay stale; nil turns the cache off (test env).
+    # The Kamal version is part of the key, so an upgrade re-parses everything.
+    def cached_subprocess_result
+      ttl = Rails.configuration.x.deploy_config_parse_cache_ttl
+      return subprocess_result unless ttl
+
+      key = result_cache_key
+      cached = Rails.cache.read(key)
+      return cached if cached.is_a?(Hash)
+
+      subprocess_result.tap { |result| Rails.cache.write(key, result, expires_in: ttl) }
+    end
+
+    def subprocess_result
+      Dir.mktmpdir(TMPDIR_PREFIX) do |dir|
+        write_config_files(dir)
+
+        result = JSON.parse(run_subprocess(dir))
+        raise ParseError, result["error"] unless result["ok"]
+
+        result
+      end
+    rescue JSON::ParserError => e
+      raise ParseError, "子进程返回了无法解析的输出：#{e.message}"
+    end
+
+    def result_cache_key
+      require "kamal/version"
+
+      # NUL-separated for the same reason as ManagedApp#app_hosts_cache_key: no field boundary
+      # shift can make two different inputs concatenate to the same string.
+      digest = Digest::SHA256.hexdigest(
+        [ Kamal::VERSION, yaml, destination, destination_yaml ].map(&:to_s).join("\u0000")
+      )
+
+      "kamal_config_parser/result/#{digest}"
+    end
 
     def write_config_files(dir)
       config_path(dir).write(yaml)
