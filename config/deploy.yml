@@ -52,11 +52,12 @@ env:
     SOLID_QUEUE_IN_PUMA: true
     PANEL_URL: https://kamal.gks.cc
     TZ: Asia/Shanghai
-    # 采集力度（全部参数与默认值见 config/collection.yml，当前全部用默认值）。全局参数用环境变量覆盖，如：
-    #   COLLECTION_STATUS_IDLE: 120            # 无人查看时的状态轮询间隔（秒）
-    #   COLLECTION_METRICS_EVERY: 5            # 资源指标采样间隔（分钟）
-    #   COLLECTION_METRICS_CONTAINERS: false   # 不跑 docker stats，只采主机级 CPU/内存/磁盘
+    # 采集力度（全部参数与默认值见 config/collection.yml），面板与生产应用同机，按 5 分钟一轮降频。
     # 按主机覆盖只能写在卷里的 storage/collection.yml（宿主机上 kamal_panel_storage 卷），改完重启面板生效。
+    COLLECTION_STATUS_IDLE: 300       # 无人查看时的状态轮询间隔（秒）；查看中 10 秒、操作后 90 秒内 5 秒不变
+    COLLECTION_METRICS_EVERY: 5       # 资源指标采样间隔（分钟）
+    COLLECTION_RETENTION_DAYS: 3      # 采集数据保留天数（默认 7），控制面板数据库大小
+    # COLLECTION_METRICS_CONTAINERS: false   # 不跑 docker stats，只采主机级 CPU/内存/磁盘
 
 aliases:
   console: app exec --interactive --reuse "bin/rails console"
