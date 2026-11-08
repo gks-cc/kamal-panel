@@ -6,9 +6,11 @@ class OverviewsController < ApplicationController
     # own section below the grid.
     all_apps = ManagedApp.active.includes(:git_connection).order(:name).to_a
 
-    # What gets marked is [all] apps, not just the ones left after filtering.
-    all_apps.each { |app| PollCadence.mark_viewed!(app) }
-
+    # Deliberately does not mark apps as viewed (PollCadence.mark_viewed!): the overview shows every
+    # app, so speeding them all up would make an overview left open all day poll the whole fleet at
+    # status.viewing, overriding status.idle — the deployer's setting (config/collection.yml) would
+    # only hold while nobody looked. The page shows what the configured cadence collects, refreshed
+    # by OverviewSignal after each round. Opening one app's page still speeds up that app.
     @any_managed_apps = all_apps.any?
     # Suggestions for the name filter (suggest_controller): every active app, not only the filtered ones.
     @app_names = all_apps.map(&:name)
