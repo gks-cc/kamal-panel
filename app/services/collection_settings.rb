@@ -14,7 +14,8 @@ class CollectionSettings
 
   # section => key => validator. The single source of what exists: anything else is a typo.
   BOOLEAN = ->(value) { value == true || value == false }
-  def self.seconds(range) = ->(value) { value.is_a?(Integer) && range.cover?(value) }
+  def self.integer(range) = ->(value) { value.is_a?(Integer) && range.cover?(value) }
+  def self.seconds(range) = integer(range)
 
   SCHEMA = {
     "status" => {
@@ -25,7 +26,8 @@ class CollectionSettings
       "enabled" => BOOLEAN, "every" => seconds(1..60), "containers" => BOOLEAN, "spread" => seconds(0..55)
     },
     "log_scan" => { "enabled" => BOOLEAN },
-    "alerts" => { "every" => seconds(10..600) }
+    "alerts" => { "every" => seconds(10..600) },
+    "retention" => { "days" => integer(1..90) }
   }.freeze
 
   # What a host may override; the rest only makes sense panel-wide (the scheduler ticks once for all).
@@ -112,6 +114,7 @@ class CollectionSettings
   def status_burst = seconds("status", "burst")
   def metrics_spread = seconds("metrics", "spread")
   def alerts_every = seconds("alerts", "every")
+  def retention = @config.dig("retention", "days").days
 
   def for_host(host)
     @host_settings[host.to_s] ||= begin

@@ -9,7 +9,13 @@ class CollectionSettingsTest < ActiveSupport::TestCase
     assert_equal 5.seconds, settings.status_tick
     assert_equal 60.seconds, settings.status_idle
     assert_equal 30.seconds, settings.alerts_every
+    assert_equal 7.days, settings.retention
     assert settings.for_host("10.0.0.1").containers
+  end
+
+  test "retention is set in days, from the file or COLLECTION_RETENTION_DAYS" do
+    assert_equal 3.days, build(retention: { days: 3 }).retention
+    assert_equal 3.days, CollectionSettings.load(env: { "COLLECTION_RETENTION_DAYS" => "3" }).retention
   end
 
   test "an override file is deep-merged, and environment variables win over it" do
@@ -48,6 +54,8 @@ class CollectionSettingsTest < ActiveSupport::TestCase
       { status: { tick: 10, burst: 5 } } => "tick ≤ burst",
       { metrics: { every: 0 } } => "metrics.every",
       { metrics: { containers: "no" } } => "metrics.containers",
+      { retention: { days: 0 } } => "retention.days",
+      { retention: { days: 91 } } => "retention.days",
       { hosts: { "10.0.0.5" => { status: { idle: 5 } } } } => "不能覆盖 idle",
       { hosts: { "10.0.0.5" => { alerts: { every: 60 } } } } => "不能覆盖 alerts"
     }.each do |overrides, message|

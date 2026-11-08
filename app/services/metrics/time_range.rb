@@ -13,10 +13,12 @@ module Metrics
 
     attr_reader :key, :span, :bucket_seconds, :to
 
-    def self.keys = OPTIONS.keys
+    # Only ranges the retention can fill: with retention.days 3 a "7 days" chart would be mostly empty.
+    # DEFAULT (1h) is always offered, since retention is at least a day.
+    def self.keys = OPTIONS.select { |_, (span, _)| span <= CollectionSettings.current.retention }.keys
 
     def initialize(key, now: Time.current)
-      @key = OPTIONS.key?(key.to_s) ? key.to_s : DEFAULT
+      @key = self.class.keys.include?(key.to_s) ? key.to_s : DEFAULT
       @span, @bucket_seconds = OPTIONS.fetch(@key)
       @to = now
     end
