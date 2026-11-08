@@ -1,5 +1,5 @@
 # One container's resource usage in one collection minute (Collectors::MetricsCollector).
-# Append-only like Observation; pruned after PruneObservationsJob::METRICS_RETENTION.
+# Append-only like Observation; pruned after retention.days (config/collection.yml) by PruneObservationsJob.
 class ContainerMetric < ApplicationRecord
   KINDS = %w[app accessory proxy].freeze
 

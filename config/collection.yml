@@ -8,8 +8,8 @@
 #      storage/collection.yml when that exists (it lives in the panel's storage volume, so it can be
 #      edited on the host without rebuilding the image)
 #   3. environment variables for the global values: COLLECTION_<SECTION>_<KEY>, e.g.
-#      COLLECTION_STATUS_IDLE=120, COLLECTION_METRICS_CONTAINERS=false (set them under env.clear in
-#      the panel's deploy.yml)
+#      COLLECTION_STATUS_IDLE=120, COLLECTION_METRICS_CONTAINERS=false, COLLECTION_RETENTION_DAYS=3
+#      (set them under env.clear in the panel's deploy.yml)
 #
 # Read once at boot; restart the panel to apply a change. A value that is out of range or a key
 # that doesn't exist stops the boot with a message naming it, rather than being silently ignored.
@@ -39,6 +39,13 @@ log_scan:
 # How often alert rules are evaluated (seconds). State rules only read the database.
 alerts:
   every: 30
+
+# How long collected data is kept, in days (1–90): status snapshots, kamal-proxy routes, resource
+# metrics and resolved alerts, pruned daily at 4am. The panel's database grows with it, roughly
+# linearly with the number of apps; the metrics tab offers no range longer than this. Audit logs
+# and deploy events are permanent and not affected.
+retention:
+  days: 7
 
 # Per-host overrides, keyed by the host exactly as written in the apps' deploy.yml (servers:). A host
 # can override these keys only; everything else is global.

@@ -38,12 +38,14 @@ Links in alert notifications need the panel's own address: set `PANEL_URL=https:
 
 The panel usually shares hosts with production apps, so how hard it probes them is yours to set:
 status-poll cadence, resource-metric interval, whether to run `docker stats` (the costly part) or
-read kamal-proxy's routing table, log-keyword scans — globally or per host. The defaults and every
+read kamal-proxy's routing table, log-keyword scans — globally or per host — and how many days of
+collected data to keep (`retention.days`, 7 by default; it sizes the panel's database). The defaults and every
 knob are documented in [`config/collection.yml`](config/collection.yml). Override them without
 rebuilding the image:
 
 - environment variables for global values, e.g. `COLLECTION_STATUS_IDLE=120`,
-  `COLLECTION_METRICS_CONTAINERS=false` (under `env.clear` in `deploy.yml`);
+  `COLLECTION_METRICS_CONTAINERS=false`, `COLLECTION_RETENTION_DAYS=3` (under `env.clear` in
+  `deploy.yml`);
 - a file with the same shape, partial is fine, at `storage/collection.yml` in the panel's volume (or
   wherever `COLLECTION_CONFIG` points) — the only way to set per-host overrides.
 

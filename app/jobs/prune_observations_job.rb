@@ -1,5 +1,6 @@
-# Clean up the panel's accumulating operational data: everything collected keeps 7 days (the owner's
-# call), which is also as far back as any chart or history view looks.
+# Clean up the panel's accumulating operational data: everything collected keeps retention.days
+# (config/collection.yml, 7 by default; the deployer's call, since it sizes the database), which is
+# also as far back as any chart or history view looks.
 #
 # Observation / ProxyTarget are append-only snapshots. Keep [two] anchors per host past the cutoff:
 # the latest overall, and the latest reachable — keeping only the former means the longer a host is
@@ -10,30 +11,31 @@
 class PruneObservationsJob < ApplicationJob
   queue_as :default
 
-  RETENTION = 7.days
   GROUP_BY = [ :managed_app_id, :host ].freeze
-  # Metrics are a time series, not state: no anchors to keep.
-  METRICS_RETENTION = RETENTION
 
   def perform
+    @cutoff = CollectionSettings.current.retention.ago
+
     prune(Observation) + prune(ProxyTarget) + prune_metrics + prune_alert_events
   end
 
   private
+    attr_reader :cutoff
+
+    # Metrics are a time series, not state: no anchors to keep.
     def prune_metrics
-      cutoff = METRICS_RETENTION.ago
       ContainerMetric.where(sampled_at: ...cutoff).delete_all + HostMetric.where(sampled_at: ...cutoff).delete_all
     end
 
     # Only resolved alerts age out; a pending or firing one is live state, however old.
     def prune_alert_events
-      AlertEvent.where(state: "resolved", resolved_at: ...RETENTION.ago).delete_all
+      AlertEvent.where(state: "resolved", resolved_at: ...cutoff).delete_all
     end
 
     def prune(model)
       keep_ids = latest_ids_per_group(model, model) | latest_ids_per_group(fallback_scope(model), model)
 
-      model.where(observed_at: ...RETENTION.ago).where.not(id: keep_ids).delete_all
+      model.where(observed_at: ...cutoff).where.not(id: keep_ids).delete_all
     end
 
     def fallback_scope(model)
