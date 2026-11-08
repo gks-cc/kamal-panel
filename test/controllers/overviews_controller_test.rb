@@ -69,4 +69,13 @@ class OverviewsControllerTest < ActionDispatch::IntegrationTest
     css_select("li.app-card").find { |card| card.at_css("h2 a")&.text == app.name }
                              &.at_css("form[action='#{managed_app_actions_path(app)}'] button")
   end
+
+  test "viewing the overview does not speed up polling: status.idle stays in charge of the fleet" do
+    app = app_with(name: "blog", versions: %w[v1 v1])
+
+    get root_path
+
+    assert_response :success
+    assert_equal PollCadence.idle, PollCadence.interval_for(app)
+  end
 end

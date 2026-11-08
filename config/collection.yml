@@ -18,8 +18,9 @@
 # the status badges, drift detection and the status alert rules.
 status:
   tick: 5        # seconds between scheduler rounds; no cadence below can be faster than this
-  idle: 60       # seconds between polls of an app nobody is looking at
-  viewing: 10    # ... while someone has the app's page open
+  idle: 60       # seconds between polls of an app nobody is looking at (the overview page counts as
+                 # nobody: it shows what this cadence collects and never speeds the fleet up)
+  viewing: 10    # ... while someone has that one app's page open
   burst: 5       # ... for 90 seconds after a deploy or an action, to show the change quickly
   proxy: true    # read kamal-proxy's routing table (a `docker exec` into kamal-proxy per poll)
 
