@@ -60,6 +60,10 @@ RUN SECRET_KEY_BASE_DUMMY=1 ./bin/rails assets:precompile
 # Final stage for app image
 FROM base
 
+# The panel is a single process: Solid Queue (collection, alerting, actions) runs inside Puma
+# (config/puma.rb). Without it a plain `docker run` would serve pages that never update.
+ENV SOLID_QUEUE_IN_PUMA="1"
+
 # Run and own only the runtime files as a non-root user for security
 RUN groupadd --system --gid 1000 rails && \
     useradd rails --uid 1000 --gid 1000 --create-home --shell /bin/bash

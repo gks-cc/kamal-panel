@@ -14,7 +14,7 @@ module KamalPanel
     # Please, add to the `ignore` list any other `lib` subdirectories that do
     # not contain `.rb` files, or that should not be reloaded or eager loaded.
     # Common ones are `templates`, `generators`, or `middleware`, for example.
-    config.autoload_lib(ignore: %w[assets tasks])
+    config.autoload_lib(ignore: %w[assets tasks panel_secrets.rb])
 
     # Configuration for the application, engines, and railties goes here.
     #
@@ -43,10 +43,16 @@ module KamalPanel
     config.i18n.available_locales = [ :"zh-CN", :en ]
     config.i18n.fallbacks = [ :en ]
 
-    # In production, read the Active Record encryption master keys from env vars, never on disk
-    # (spec 7.2). In development, `bin/rails credentials:edit` can write them to
+    # In production, read the Active Record encryption master keys from env vars (spec 7.2). When
+    # they aren't set, a fresh install generates them, with SECRET_KEY_BASE, into the storage volume
+    # so the image runs without setup (lib/panel_secrets.rb, which explains the trade-off); set
+    # values always win. In development, `bin/rails credentials:edit` can write them to
     # credentials.yml.enc; the test environment uses the fixed test-only keys in
     # config/environments/test.rb (see the comments in that file).
+    if Rails.env.production?
+      require_relative "../lib/panel_secrets"
+      PanelSecrets.load!(root: File.expand_path("..", __dir__))
+    end
     config.active_record.encryption.primary_key = ENV["AR_ENCRYPTION_PRIMARY_KEY"] if ENV["AR_ENCRYPTION_PRIMARY_KEY"]
     config.active_record.encryption.deterministic_key = ENV["AR_ENCRYPTION_DETERMINISTIC_KEY"] if ENV["AR_ENCRYPTION_DETERMINISTIC_KEY"]
     config.active_record.encryption.key_derivation_salt = ENV["AR_ENCRYPTION_KEY_DERIVATION_SALT"] if ENV["AR_ENCRYPTION_KEY_DERIVATION_SALT"]

@@ -3,6 +3,7 @@ class SessionsController < ApplicationController
   rate_limit to: 10, within: 3.minutes, only: :create, with: -> { redirect_to new_session_path, alert: I18n.t("flash.rate_limited") }
 
   def new
+    redirect_to setup_path if FirstRunSetup.needed?
   end
 
   def create

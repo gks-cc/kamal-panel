@@ -49,3 +49,10 @@
 # Ignore Docker-related files
 /.dockerignore
 /Dockerfile*
+
+# Local tooling and notes, never part of the image.
+/.remember
+/.superpowers
+/.playwright-mcp
+/.ruby-lsp
+/.claude

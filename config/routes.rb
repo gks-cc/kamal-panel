@@ -1,5 +1,8 @@
 Rails.application.routes.draw do
   resource :session
+  # First-run setup: create the first admin, with the one-time token from the panel's logs. Only
+  # while there are no users (FirstRunSetup).
+  resource :setup, only: [ :show, :create ]
   # Change your own UI language. Deliberately [not] under resources :users: that group is
   # admin-only, while changing language must be available to everyone (see the comment at the top of
   # LocalesControllerTest).
