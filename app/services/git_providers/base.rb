@@ -4,7 +4,7 @@ module GitProviders
   # Shared plumbing: authenticated JSON GETs with the panel's timeout, one error type, and a short
   # cache. Subclasses only know their provider's paths and payload shapes.
   #
-  # Interface (both providers): current_user, default_branch, commits(branch:, limit:), tags(limit:),
+  # Interface (every provider): current_user, default_branch, commits(branch:, limit:), tags(limit:),
   # commit(sha), commit_for_tag(tag), ci_status(sha), compare(from, to), and the URL builders
   # commit_url / tag_url / compare_url, which never touch the network (deploy history and the
   # overview render links from them).
@@ -42,8 +42,11 @@ module GitProviders
         url = "#{connection.api_url}#{path}"
         url += "?#{params.compact.to_query}" if params.compact.any?
 
-        response = OutboundHttp.request(:get, url, headers: auth_headers.merge("Accept" => accept_header))
+        response = OutboundHttp.request(:get, url, headers: auth_headers.merge("Accept" => accept_header),
+                                                   ca_certificate: connection.ca_certificate)
         handle(response)
+      rescue OutboundHttp::TlsError => e
+        raise Error.new(:tls, detail: e.message)
       rescue OutboundHttp::Error => e
         raise Error.new(:unreachable, detail: e.message)
       end
