@@ -4,7 +4,7 @@
 # overlap; limits_concurrency drops the newer one (the next minute's round will come), and the
 # unique indexes make a sample that slips through anyway a no-op.
 class CollectMetricsJob < ApplicationJob
-  queue_as :default
+  queue_as :collect
 
   limits_concurrency to: 1, key: ->(managed_app) { "collect_metrics/#{managed_app.id}" },
                      duration: 5.minutes, on_conflict: :discard

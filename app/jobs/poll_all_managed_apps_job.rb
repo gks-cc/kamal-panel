@@ -1,7 +1,7 @@
 # Triggered on a schedule by Solid Queue's recurring.
 # Each app decides on its own cadence whether this round should run (spec 6.3).
 class PollAllManagedAppsJob < ApplicationJob
-  queue_as :default
+  queue_as :collect
 
   def perform
     # accumulate one failure observation.

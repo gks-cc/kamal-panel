@@ -9,9 +9,10 @@ class AuditLog < ApplicationRecord
 
   RESULTS = %w[pending success failure].freeze
 
-  # No run outlives the CLI timeout; the margin covers queueing and agent teardown. A row still
-  # pending after this was cut off (process restarted, job lost) and will never finish.
-  INTERRUPTED_AFTER = KamalCli::Invocation::DEFAULT_TIMEOUT + 5.minutes
+  # No run outlives the CLI timeout. The margin covers agent teardown and waiting in the actions
+  # queue, which can be one CLI timeout when every action thread is busy (config/queue.yml). A row
+  # still pending after this was cut off (process restarted, job lost) and will never finish.
+  INTERRUPTED_AFTER = KamalCli::Invocation::DEFAULT_TIMEOUT * 2 + 5.minutes
 
   ACCESS_ACTIONS = %w[
     user.create user.update_role user.deactivate user.reactivate user.change_password

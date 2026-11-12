@@ -109,4 +109,30 @@ class RunActionJobTest < ExecutionLayerTest
 
     assert_equal "exited", FakeHost.ssh("node-1", "docker inspect -f '{{.State.Status}}' #{container}").strip
   end
+
+  # Two actions on one app race each other; the second is refused with a reason rather than run.
+  test "refuses an action while another action of the same app is running" do
+    app = build_app(ssh_credential: nil)
+    Rails.cache.write(RunActionJob.running_key(app), 12345)
+    log = start_log(app, "stop")
+
+    RunActionJob.new.perform(log.id)
+
+    log.reload
+    assert_equal "failure", log.result
+    assert_match "#12345", log.output_digest
+    assert_equal 12345, Rails.cache.read(RunActionJob.running_key(app)), "must not release someone else's claim"
+  ensure
+    Rails.cache.delete(RunActionJob.running_key(app)) if app
+  end
+
+  test "releases the app for the next action once a run ends, even when it fails" do
+    app = build_app(ssh_credential: nil)
+    log = start_log(app, "logs")
+
+    RunActionJob.new.perform(log.id)
+
+    assert_equal "failure", log.reload.result
+    assert_nil Rails.cache.read(RunActionJob.running_key(app))
+  end
 end

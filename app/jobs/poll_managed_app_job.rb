@@ -1,6 +1,6 @@
 # One collection round for one app.
 class PollManagedAppJob < ApplicationJob
-  queue_as :default
+  queue_as :collect
 
   def perform(managed_app)
     # accumulate one failure observation — just give up.

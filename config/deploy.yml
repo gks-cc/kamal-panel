@@ -19,7 +19,7 @@ image: your-org/kamal-panel
 # can never starve them. cpu-shares only matters under contention (it gets a quarter of the
 # default weight then, and full speed on an idle host). memory is a hard ceiling for everything in
 # the container: Puma with the jobs inside (~150–250 MB) plus the kamal and ssh subprocesses that
-# deploys and actions start (each kamal is a full Ruby process, ~100–150 MB, up to JOB_THREADS at
+# deploys and actions start (each kamal is a full Ruby process, ~100–150 MB, up to ACTION_THREADS at
 # once). Hitting it OOM-kills the panel mid-deploy and leaves the deploy lock on the host, so size
 # it for concurrent actions, and check docker stats during one before lowering it.
 servers:
