@@ -16,6 +16,8 @@ class CollectMetricsJob < ApplicationJob
   rescue Kamal::ConfigParser::ParseError
     # The status poll records and shows parse errors; metrics just wait for a config that parses.
     nil
+  ensure
+    PanelHealth.beat!(:metrics)
   end
 
   # Metrics need SSH: no key, nothing to log in with. A config that didn't parse last time must not

@@ -631,6 +631,12 @@ en:
       Boots the running version %{version} again on every host. The deploy lock is checked before it runs.
 
   shared:
+    panel_health:
+      stalled: "The panel's background work has stopped: %{checks} hasn't finished a round for %{minutes} minutes, so states, metrics and alerts on these pages may be out of date. Check the panel's logs for errors; restarting the panel usually recovers it."
+      checks:
+        status_poll: status collection
+        metrics: resource metrics
+        alerts: alert evaluation
     auth_hero:
       eyebrow: The control room for Kamal deploys
       title: Know where every deploy stands.

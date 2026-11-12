@@ -11,5 +11,7 @@ class EvaluateAlertRulesJob < ApplicationJob
 
   def perform
     Alerting::Evaluator.call
+  ensure
+    PanelHealth.beat!(:alerts)
   end
 end

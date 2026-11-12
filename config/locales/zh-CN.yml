@@ -650,6 +650,12 @@ zh-CN:
       用当前运行的版本 %{version} 重新启动所有主机上的容器。部署锁会在执行前检查。
 
   shared:
+    panel_health:
+      stalled: 面板的后台任务停了：%{checks}已经 %{minutes} 分钟没有完成一轮，页面上的状态、指标和告警可能已过期。请先看面板日志里有没有报错，重启面板通常能恢复。
+      checks:
+        status_poll: 状态采集
+        metrics: 资源指标采集
+        alerts: 告警评估
     auth_hero:
       eyebrow: Kamal 部署的运维台
       title: 每一次部署，都有据可查。

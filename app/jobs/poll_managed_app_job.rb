@@ -56,6 +56,8 @@ class PollManagedAppJob < ApplicationJob
     broadcast_host_status_refresh(managed_app) unless parse_error
 
     raise error if error
+  ensure
+    PanelHealth.beat!(:status_poll)
   end
 
   private

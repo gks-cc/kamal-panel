@@ -1,0 +1,12 @@
+<%# Shown on every signed-in page while some background work is overdue (PanelHealth): the pages keep
+    showing what the jobs last wrote, so without this a stopped panel looks healthy. %>
+<% report = PanelHealth.report %>
+<% unless report.ok? %>
+  <% stalled = report.stalled %>
+  <p class="flash flash-warning panel-health" role="alert">
+    <%= icon_tag("circle-alert", size: :sm) %>
+    <span><%= t("shared.panel_health.stalled",
+                checks: joined_list(stalled.map { |check| t("shared.panel_health.checks.#{check.name}") }),
+                minutes: (stalled.map(&:age).max / 60).floor) %></span>
+  </p>
+<% end %>
