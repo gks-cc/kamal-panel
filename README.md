@@ -18,6 +18,26 @@ Kamal's own commands and does **not** replace Kamal — images are still built b
 > admins manage. Read the
 > [security posture](https://wenlingang.github.io/kamal-panel-site/docs/#security) before you deploy it anywhere.
 
+## Try it
+
+From the prebuilt image, with nothing to build and no keys to set up:
+
+```sh
+docker run -d --name kamal-panel -p 8080:80 \
+  -v kamal_panel_storage:/rails/storage ghcr.io/wenlingang/kamal-panel:latest
+docker logs kamal-panel 2>&1 | grep '\[setup\]'   # the one-time link that creates the first admin
+```
+
+Open that link (with `<panel address>` replaced by `http://localhost:8080`), create the admin, and you're in.
+
+- When `SECRET_KEY_BASE` and the three `AR_ENCRYPTION_*` keys aren't provided as environment variables,
+  the first boot generates them into `storage/panel_secrets.yml` in the volume. That sits next to the
+  database: whoever gets the volume can decrypt the stored SSH keys. Before real use, move the values
+  into environment variables and delete the file.
+- `GET /health` reports whether the panel's background work (status collection, metrics, alert
+  evaluation) is still running, 503 when it stalled — point an uptime monitor at it. `/up` only says the
+  process is alive.
+
 ## Deploy
 
 `config/deploy.yml` is a working Kamal configuration — change `image`, `servers.web` and
@@ -52,7 +72,12 @@ rebuilding the image:
 Settings are read at boot (restart the panel to apply) and validated: a typo or an out-of-range
 value stops the boot with a message naming it.
 
-Then create the first admin account: [Deploying the panel](https://wenlingang.github.io/kamal-panel-site/docs/#deploy).
+Then create the first admin from the browser, with the one-time link in `bin/kamal app logs | grep '\[setup\]'`,
+or as before with `KAMAL_PANEL_ADMIN_EMAIL=... KAMAL_PANEL_ADMIN_PASSWORD=... bin/rails db:seed`: [Deploying the panel](https://wenlingang.github.io/kamal-panel-site/docs/#deploy).
+
+Background jobs run in three workers by kind (`config/queue.yml`), each sized by an environment
+variable: `JOB_THREADS` (collection, 3 by default), `ACTION_THREADS` (kamal actions, 2; each runs a
+~100–150 MB kamal process) and `ALERT_THREADS` (alerting, 1).
 
 ## Development
 

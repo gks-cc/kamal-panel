@@ -5,11 +5,13 @@
 # adapter), the unique indexes on alert_events and the compare-and-set transitions in AlertEvent
 # keep it to one event and one notification.
 class EvaluateAlertRulesJob < ApplicationJob
-  queue_as :default
+  queue_as :alerts
 
   limits_concurrency to: 1, key: "evaluate_alert_rules", duration: 5.minutes, on_conflict: :discard
 
   def perform
     Alerting::Evaluator.call
+  ensure
+    PanelHealth.beat!(:alerts)
   end
 end

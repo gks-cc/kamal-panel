@@ -15,6 +15,24 @@
 > admin 添加应用。面板还会主动连外部：用 Git 平台 token 读提交与 CI 状态、探测镜像仓库、向通知
 > Webhook 发送告警——这些凭据同样只由 admin 管理。部署到任何地方之前，先读[安全边界](https://wenlingang.github.io/kamal-panel-site/zh-CN/docs/#security)。
 
+## 快速试用
+
+用预构建镜像，不需要构建，也不需要配置任何密钥：
+
+```sh
+docker run -d --name kamal-panel -p 8080:80 \
+  -v kamal_panel_storage:/rails/storage ghcr.io/wenlingang/kamal-panel:latest
+docker logs kamal-panel 2>&1 | grep '\[setup\]'   # 一次性链接，用它创建第一个管理员
+```
+
+打开日志里那条链接（把 `<panel address>` 换成 `http://localhost:8080`），创建管理员后即可登录。
+
+- 没有通过环境变量提供 `SECRET_KEY_BASE` 和三个 `AR_ENCRYPTION_*` 时，首次启动会自动生成，存到卷里的
+  `storage/panel_secrets.yml`。它和数据库在同一个卷里，拿到卷的人就能解密保存的 SSH 私钥。正式使用前，
+  把文件里的值挪到环境变量里，再删掉这个文件。
+- `GET /health` 汇报面板后台任务（状态采集、指标采集、告警评估）是否还在跑，停滞时返回 503，可以接外部探活。
+  `/up` 只表示进程活着。
+
 ## 部署
 
 `config/deploy.yml` 是一份可用的 Kamal 配置，改好 `image`、`servers.web`、`proxy.host` 三行，然后：
@@ -29,7 +47,11 @@ bin/kamal setup                # 之后用 bin/kamal deploy
 告警通知里的链接需要面板自己的地址：设置 `PANEL_URL=https://panel.example.com`（不设则通知不带链接）。
 邮件渠道和找回密码需要 SMTP：`SMTP_ADDRESS`、`SMTP_PORT`、`SMTP_USERNAME`、`SMTP_PASSWORD`、`PANEL_MAIL_FROM`。
 
-接着创建第一个 admin 账号，见[部署面板](https://wenlingang.github.io/kamal-panel-site/zh-CN/docs/#deploy)。
+第一个 admin 账号：在 `bin/kamal app logs | grep '\[setup\]'` 里找一次性链接，在浏览器里创建；
+也可以照旧用 `KAMAL_PANEL_ADMIN_EMAIL=... KAMAL_PANEL_ADMIN_PASSWORD=... bin/rails db:seed`，见[部署面板](https://wenlingang.github.io/kamal-panel-site/zh-CN/docs/#deploy)。
+
+后台任务按类型分在三个 worker 里（`config/queue.yml`），线程数可调：`JOB_THREADS`（采集，默认 3）、
+`ACTION_THREADS`（kamal 操作，默认 2，每个占一个 ~100–150 MB 的 kamal 进程）、`ALERT_THREADS`（告警，默认 1）。
 
 ## 本地开发
 

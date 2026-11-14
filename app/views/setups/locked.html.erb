@@ -1,0 +1,11 @@
+<%# Setup without (or with a wrong) token: say where the link is, never what it is. %>
+<div class="auth">
+  <div class="auth-card">
+    <h1><%= t("setups.show.title") %></h1>
+    <%= tag.div(flash[:alert], class: "flash-alert") if flash[:alert] %>
+    <p><%= t(".lead") %></p>
+    <pre class="action-output"><code>kamal app logs | grep '\[setup\]'
+docker logs &lt;container&gt; 2&gt;&amp;1 | grep '\[setup\]'</code></pre>
+    <p class="hint"><%= t(".hint") %></p>
+  </div>
+</div>

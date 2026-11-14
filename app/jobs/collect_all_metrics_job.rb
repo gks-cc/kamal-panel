@@ -2,7 +2,7 @@
 # collected. Unlike the status poll there is no per-app cadence: a chart wants evenly spaced
 # samples whether or not anyone is looking.
 class CollectAllMetricsJob < ApplicationJob
-  queue_as :default
+  queue_as :collect
 
   # The round is spread over this window instead of enqueued all at once: every job opens SSH
   # sessions and may parse a deploy.yml, and a dozen of them landing in the same second pins the

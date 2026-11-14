@@ -556,6 +556,18 @@ en:
       password_confirmation: Confirm new password
       submit: Change password
 
+  setups:
+    show:
+      title: Create the admin
+      lead: This panel is brand new and has no accounts yet. Create the first admin; add everyone else under People afterwards.
+      email: Email address
+      password: Password (at least 8 characters)
+      password_confirmation: Password again
+      submit: Create and sign in
+    locked:
+      lead: "This panel is brand new and has no accounts yet. Creating the admin takes a one-time link printed in the panel's logs (only someone who can read them gets it, so nobody else can claim the panel first):"
+      hint: Opening this page just printed it to the logs again. The link stops working once the first admin exists.
+
   sessions:
     new:
       title: Sign in
@@ -631,6 +643,12 @@ en:
       Boots the running version %{version} again on every host. The deploy lock is checked before it runs.
 
   shared:
+    panel_health:
+      stalled: "The panel's background work has stopped: %{checks} hasn't finished a round for %{minutes} minutes, so states, metrics and alerts on these pages may be out of date. Check the panel's logs for errors; restarting the panel usually recovers it."
+      checks:
+        status_poll: status collection
+        metrics: resource metrics
+        alerts: alert evaluation
     auth_hero:
       eyebrow: The control room for Kamal deploys
       title: Know where every deploy stands.
@@ -801,6 +819,9 @@ en:
     config_unparseable: The config can't be parsed; nothing ran.
     rate_limited: Please try again later.
     bad_credentials: That email address or password is not correct.
+    setup:
+      done: "The admin is created and you're signed in. Next: add an SSH key under Credentials, then connect your first app."
+      already_done: Someone already finished setting up the panel. Please sign in.
     password:
       reset_sent: If that email address exists, reset instructions have been sent.
       reset_done: Your password has been reset.
@@ -883,6 +904,7 @@ en:
         update_fields: changed %{fields}
       user:
         password_by_admin: password set directly by an admin
+        first_admin: first admin, created at setup
         password_by_mail: password setup email sent
 
     note_wrapper: " (%{note})"

@@ -1,6 +1,6 @@
 # One collection round for one app.
 class PollManagedAppJob < ApplicationJob
-  queue_as :default
+  queue_as :collect
 
   def perform(managed_app)
     # accumulate one failure observation — just give up.
@@ -56,6 +56,8 @@ class PollManagedAppJob < ApplicationJob
     broadcast_host_status_refresh(managed_app) unless parse_error
 
     raise error if error
+  ensure
+    PanelHealth.beat!(:status_poll)
   end
 
   private

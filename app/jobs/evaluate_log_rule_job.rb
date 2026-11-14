@@ -1,7 +1,7 @@
 # One log-keyword scan for one (rule, app), scheduled by Alerting::Evaluator. A job of its own so a
 # slow SSH session holds up only itself, never the 30-second round of state rules.
 class EvaluateLogRuleJob < ApplicationJob
-  queue_as :default
+  queue_as :collect
 
   # A scan still running when the next one is due (slow hosts, a long window) makes the next one
   # pointless; drop it rather than stack SSH sessions.

@@ -4,7 +4,7 @@
 class DeliverAlertNotificationJob < ApplicationJob
   class DeliveryFailed < StandardError; end
 
-  queue_as :default
+  queue_as :alerts
 
   retry_on DeliveryFailed, wait: 30.seconds, attempts: 3 do |job, error|
     Rails.logger.warn("[alerts] 通知投递放弃：#{job.arguments.second&.name}: #{error.message}")

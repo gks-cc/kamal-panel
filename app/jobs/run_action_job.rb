@@ -1,6 +1,14 @@
 # Run an action.
 class RunActionJob < ApplicationJob
-  queue_as :default
+  queue_as :actions
+
+  # One action per app at a time. Two runs against the same app race each other (kamal's own
+  # deploy lock only covers the lock-taking actions, and is only taken once kamal gets that far),
+  # so a second one is refused with a message, like a held deploy lock, rather than queued behind
+  # the first. Expires after the CLI timeout in case the process dies without releasing it.
+  RUNNING_TTL = KamalCli::Invocation::DEFAULT_TIMEOUT + 5.minutes
+
+  def self.running_key(managed_app) = "run_action/running/#{managed_app.id}"
 
   def perform(audit_log_id)
     log = AuditLog.find(audit_log_id)
@@ -9,6 +17,7 @@ class RunActionJob < ApplicationJob
                                                                 target: log.target)
     started = Time.current
 
+    return unless (claimed = claim_app(app, log, started))
     return if action.class.requires_lock? && !lock_free?(app, log, started)
 
     # Opened only once the run really starts: an attempt the lock refused never happened, and its
@@ -44,6 +53,8 @@ class RunActionJob < ApplicationJob
     Rails.logger.error("[action] 执行出错：#{e.class}: #{e.message}")
     finish_blocked(log, started || Time.current, "执行出错：#{e.message}") if log.reload.result == "pending"
     finish_deploy_event(event, success: false) if event && event.reload.result == :running
+  ensure
+    release_app(app, log) if claimed
   end
 
   private
@@ -63,6 +74,19 @@ class RunActionJob < ApplicationJob
       return if event.nil?
 
       success ? event.update!(succeeded_at: Time.current) : event.update!(failed_at: Time.current)
+    end
+
+    def claim_app(app, log, started)
+      key = self.class.running_key(app)
+      return true if Rails.cache.write(key, log.id, expires_in: RUNNING_TTL, unless_exist: true)
+
+      finish_blocked(log, started, "本应用的另一个操作（##{Rails.cache.read(key)}）还在执行，未执行。等它结束后再试。")
+      false
+    end
+
+    def release_app(app, log)
+      key = self.class.running_key(app)
+      Rails.cache.delete(key) if Rails.cache.read(key) == log.id
     end
 
     def lock_free?(app, log, started)

@@ -575,6 +575,18 @@ zh-CN:
       password_confirmation: 确认新密码
       submit: 修改密码
 
+  setups:
+    show:
+      title: 创建管理员
+      lead: 这是一个全新的面板，还没有任何账号。先创建第一个管理员，之后在「人员」里添加其他人。
+      email: 邮箱地址
+      password: 密码（至少 8 位）
+      password_confirmation: 再输入一次密码
+      submit: 创建并登录
+    locked:
+      lead: 这是一个全新的面板，还没有任何账号。创建管理员需要一个一次性链接，它印在面板的日志里（只有能看日志的人才能拿到，防止别人抢先注册）：
+      hint: 刚才打开这个页面时，日志里已经又印了一次。链接在创建完第一个管理员后失效。
+
   sessions:
     new:
       title: 登录
@@ -650,6 +662,12 @@ zh-CN:
       用当前运行的版本 %{version} 重新启动所有主机上的容器。部署锁会在执行前检查。
 
   shared:
+    panel_health:
+      stalled: 面板的后台任务停了：%{checks}已经 %{minutes} 分钟没有完成一轮，页面上的状态、指标和告警可能已过期。请先看面板日志里有没有报错，重启面板通常能恢复。
+      checks:
+        status_poll: 状态采集
+        metrics: 资源指标采集
+        alerts: 告警评估
     auth_hero:
       eyebrow: Kamal 部署的运维台
       title: 每一次部署，都有据可查。
@@ -807,6 +825,9 @@ zh-CN:
     config_unparseable: 配置无法解析，操作未执行。
     rate_limited: 请稍后再试。
     bad_credentials: 邮箱地址或密码不正确。
+    setup:
+      done: 管理员已创建，你已登录。下一步：在「凭据」里加 SSH 私钥，再接入第一个应用。
+      already_done: 已经有人完成了初始设置，请登录。
     password:
       reset_sent: 如果该邮箱地址存在，重置说明已发送。
       reset_done: 密码已重置。
@@ -893,6 +914,7 @@ zh-CN:
         update_fields: 改了 %{fields}
       user:
         password_by_admin: 密码由管理员直接设置
+        first_admin: 首次安装时创建的管理员
         password_by_mail: 已发送设置密码邮件
 
     note_wrapper: "（%{note}）"
